@@ -1,0 +1,13 @@
+/home/marios/Distributed-Systems/ui-service/src/main/java/gr/tuc/distributed/ui/UiApplication.java
+/home/marios/Distributed-Systems/ui-service/src/main/java/gr/tuc/distributed/ui/client/KeycloakAdminClient.java
+/home/marios/Distributed-Systems/ui-service/src/main/java/gr/tuc/distributed/ui/client/ManagerClient.java
+/home/marios/Distributed-Systems/ui-service/src/main/java/gr/tuc/distributed/ui/config/OpenApiConfig.java
+/home/marios/Distributed-Systems/ui-service/src/main/java/gr/tuc/distributed/ui/config/SecurityConfig.java
+/home/marios/Distributed-Systems/ui-service/src/main/java/gr/tuc/distributed/ui/config/WebClientConfig.java
+/home/marios/Distributed-Systems/ui-service/src/main/java/gr/tuc/distributed/ui/controller/AdminController.java
+/home/marios/Distributed-Systems/ui-service/src/main/java/gr/tuc/distributed/ui/controller/AuthController.java
+/home/marios/Distributed-Systems/ui-service/src/main/java/gr/tuc/distributed/ui/controller/CodeController.java
+/home/marios/Distributed-Systems/ui-service/src/main/java/gr/tuc/distributed/ui/controller/DataController.java
+/home/marios/Distributed-Systems/ui-service/src/main/java/gr/tuc/distributed/ui/controller/GlobalExceptionHandler.java
+/home/marios/Distributed-Systems/ui-service/src/main/java/gr/tuc/distributed/ui/controller/JobController.java
+/home/marios/Distributed-Systems/ui-service/src/main/java/gr/tuc/distributed/ui/service/CodeAssistService.java

@@ -1,0 +1,2356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MapReduce Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #1565c0;
+      --primary-dark: #0d47a1;
+      --primary-light: #5b9ef5;
+      --success: #2e7d32;
+      --success-light: #66bb6a;
+      --error: #c62828;
+      --error-light: #ef5350;
+      --warning: #e65100;
+      --warning-light: #ffb74d;
+      --info: #0277bd;
+      --bg: #f8fafb;
+      --bg-alt: #ecf0f5;
+      --surface: #ffffff;
+      --surface-2: #f5f7fa;
+      --surface-3: #eeeeee;
+      --text-primary: #1a1a2e;
+      --text-secondary: #6b7280;
+      --text-tertiary: #9ca3af;
+      --border: #e5e7eb;
+      --border-light: #f3f4f6;
+      --shadow-xs: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md: 0 2px 8px rgba(0,0,0,0.12);
+      --shadow-lg: 0 4px 12px rgba(0,0,0,0.15);
+      --shadow-xl: 0 8px 24px rgba(0,0,0,0.18);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+    }
+
+    /* ── Dark Mode ── */
+    html[data-theme="dark"] {
+      --primary: #6ba3ff;
+      --primary-dark: #90caf9;
+      --primary-light: #64b5f6;
+      --success: #81c784;
+      --success-light: #a5d6a7;
+      --error: #ef5350;
+      --error-light: #ff8a80;
+      --warning: #ffb74d;
+      --warning-light: #ffe082;
+      --bg: #0f172a;
+      --bg-alt: #1a2540;
+      --surface: #1e293b;
+      --surface-2: #293548;
+      --surface-3: #334155;
+      --text-primary: #f1f5f9;
+      --text-secondary: #cbd5e1;
+      --text-tertiary: #94a3b8;
+      --border: #334155;
+      --border-light: #475569;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.5;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--primary) 0%, #1976d2 100%);
+      color: #fff;
+      padding: 0 24px;
+      height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow-lg);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    header h1 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    header h1::before { content: '⚙️'; font-size: 1.4rem; }
+    #user-info {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      font-size: .9rem;
+    }
+    #timer-label {
+      background: rgba(255,255,255,.2);
+      padding: 7px 14px;
+      border-radius: 24px;
+      font-size: .8rem;
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+      border: 1px solid rgba(255,255,255,.3);
+      transition: all 0.3s ease;
+    }
+    #timer-label.warn {
+      background: rgba(255,193,7,.35);
+      color: #fff;
+      font-weight: 700;
+      box-shadow: 0 0 12px rgba(255,193,7,.3);
+    }
+    #timer-label.critical {
+      background: rgba(244,67,54,.45);
+      color: #fff;
+      font-weight: 700;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+    .btn {
+      padding: 11px 22px;
+      border-radius: 8px;
+      border: none;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: rgba(255,255,255,0.2);
+      transition: left 0.3s ease;
+    }
+    .btn:hover:not(:disabled)::before { left: 100%; }
+    .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+    .btn:active:not(:disabled) { transform: translateY(0); }
+    .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, #1976d2 100%); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: linear-gradient(135deg, #1565c0 0%, #1565c0 100%); }
+    .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-sm { padding: 9px 16px; font-size: .85rem; }
+    .btn-outline {
+      background: transparent;
+      border: 1.5px solid var(--primary);
+      color: var(--primary);
+    }
+    .btn-outline:hover:not(:disabled) {
+      background: rgba(21,101,192,0.1);
+      border-color: #1565c0;
+    }
+    .btn-ghost {
+      background: transparent;
+      border: 1.5px solid rgba(255,255,255,.5);
+      color: #fff;
+      font-weight: 600;
+    }
+    .btn-ghost:hover {
+      background: rgba(255,255,255,.15);
+      border-color: rgba(255,255,255,.8);
+    }
+    .btn-cancel {
+      background: transparent;
+      border: 1.5px solid var(--error);
+      color: var(--error);
+    }
+    .btn-cancel:hover {
+      background: rgba(198,40,40,0.1);
+      border-color: var(--error-light);
+      color: var(--error-light);
+    }
+    .btn-text {
+      background: none;
+      border: none;
+      color: var(--primary);
+      padding: 0;
+      font-size: 0.85rem;
+      text-decoration: underline;
+    }
+
+    .btn:focus-visible,
+    .theme-toggle:focus-visible,
+    .filter-chip:focus-visible,
+    .preset-chip:focus-visible,
+    .copy-btn:focus-visible,
+    .refresh-toggle:focus-visible,
+    .modal-close:focus-visible,
+    input:focus-visible {
+      outline: 3px solid rgba(21,101,192,0.35);
+      outline-offset: 2px;
+    }
+
+    #login-page, #dashboard-page { max-width: 720px; margin: 40px auto; padding: 0 16px; }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: 28px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-light);
+      transition: all 0.3s ease;
+    }
+    .card:hover { box-shadow: var(--shadow-md); }
+    .card h3 {
+      margin-bottom: 16px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card p { color: var(--text-secondary); font-size: .95rem; }
+
+    label {
+      display: block;
+      font-size: .85rem;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      margin-top: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input[type=text], input[type=password], input[type=number] {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: .9rem;
+      transition: all 0.25s ease;
+      background: var(--surface);
+      color: var(--text-primary);
+    }
+    input[type=text]::placeholder, input[type=password]::placeholder, input[type=number]::placeholder {
+      color: var(--text-tertiary);
+    }
+    input[type=text]:focus, input[type=password]:focus, input[type=number]:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: var(--bg-alt);
+      box-shadow: 0 0 0 4px rgba(21,101,192,0.12);
+    }
+    input[type=text]:disabled, input[type=password]:disabled, input[type=number]:disabled {
+      background: var(--surface-2);
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .file-row {
+      display: flex;
+      gap: 12px;
+      align-items: stretch;
+      margin-top: 12px;
+    }
+    .drop-zone {
+      flex: 1;
+      padding: 20px 14px;
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--bg-alt) 0%, var(--surface-2) 100%);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: .85rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      min-height: 60px;
+      position: relative;
+      overflow: hidden;
+    }
+    .drop-zone::before {
+      content: '📂';
+      display: block;
+      font-size: 1.8rem;
+      margin-right: 10px;
+    }
+    .drop-zone input[type=file] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .drop-zone:hover {
+      border-color: var(--primary);
+      background: rgba(21,101,192,0.05);
+      box-shadow: inset 0 0 0 1px rgba(21,101,192,0.2);
+    }
+    .drop-zone.dragover {
+      border-color: var(--primary);
+      background: rgba(21,101,192,0.1);
+      box-shadow: inset 0 0 0 2px rgba(21,101,192,0.3), var(--shadow-sm);
+      transform: scale(1.01);
+    }
+    .file-row {
+      display: flex;
+      gap: 12px;
+      align-items: stretch;
+      margin-top: 12px;
+    }
+    .file-row input[type=file] {
+      flex: 1;
+      padding: 12px 14px;
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      background: var(--bg-alt);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: .9rem;
+    }
+    .file-row input[type=file]:hover { border-color: var(--primary); background: rgba(21,101,192,0.05); }
+    .file-row input[type=file]:focus { outline: none; border-color: var(--primary); }
+
+    .status-badge {
+      display: inline-block;
+      padding: 5px 13px;
+      border-radius: 20px;
+      font-size: .75rem;
+      font-weight: 700;
+      margin-left: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    .badge-ok {
+      background: linear-gradient(135deg, rgba(46,125,50,0.15) 0%, rgba(102,187,106,0.1) 100%);
+      color: var(--success);
+    }
+    .badge-missing {
+      background: linear-gradient(135deg, rgba(198,40,40,0.15) 0%, rgba(239,83,80,0.1) 100%);
+      color: var(--error);
+    }
+
+    .alert {
+      padding: 14px 16px;
+      border-radius: 8px;
+      font-size: .9rem;
+      margin-top: 12px;
+      display: none;
+      border-left: 4px solid;
+      animation: slideIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    .alert.show { display: block; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    .alert-error { background: linear-gradient(135deg, rgba(198,40,40,0.08) 0%, rgba(239,83,80,0.04) 100%); color: var(--error); border-left-color: var(--error); }
+    .alert-success { background: linear-gradient(135deg, rgba(46,125,50,0.08) 0%, rgba(102,187,106,0.04) 100%); color: var(--success); border-left-color: var(--success); }
+    .alert-info { background: linear-gradient(135deg, rgba(21,101,192,0.08) 0%, rgba(91,158,245,0.04) 100%); color: var(--primary); border-left-color: var(--primary); }
+    .alert-warning { background: linear-gradient(135deg, rgba(230,124,115,0.08) 0%, rgba(255,180,77,0.04) 100%); color: var(--warning); border-left-color: var(--warning); }
+
+    .jobs-empty {
+      text-align: center;
+      color: var(--text-secondary);
+      padding: 60px 20px;
+      font-size: .95rem;
+    }
+    .jobs-empty::before { content: '📋'; display: block; font-size: 3rem; margin-bottom: 12px; }
+
+    /* ── Job row ── */
+    .job-row {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      margin-bottom: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
+      transition: all 0.3s ease;
+    }
+    .job-row:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--primary-light);
+      transform: translateY(-2px);
+    }
+    .job-row-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .job-id {
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: .8rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+    .job-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .s-INITIALIZING, .s-MAP_PHASE, .s-REDUCE_PHASE {
+      background: linear-gradient(135deg, rgba(21,101,192,0.15) 0%, rgba(91,158,245,0.1) 100%);
+      color: var(--primary);
+    }
+    .s-COMPLETED {
+      background: linear-gradient(135deg, rgba(46,125,50,0.15) 0%, rgba(102,187,106,0.1) 100%);
+      color: var(--success);
+    }
+    .s-FAILED {
+      background: linear-gradient(135deg, rgba(198,40,40,0.15) 0%, rgba(239,83,80,0.1) 100%);
+      color: var(--error);
+    }
+    .s-CANCELLED {
+      background: linear-gradient(135deg, rgba(103,58,183,0.15) 0%, rgba(142,68,173,0.1) 100%);
+      color: #6a1b9a;
+    }
+
+    /* ── Result viewer ── */
+    .result-viewer {
+      margin-top: 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: none;
+      background: var(--surface);
+      animation: slideIn 0.2s ease;
+    }
+    .result-viewer.open { display: block; }
+
+    .viewer-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: linear-gradient(135deg, var(--surface-2) 0%, var(--bg-alt) 100%);
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+    }
+    .viewer-stats {
+      font-size: .85rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    .viewer-stats b {
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .result-table-wrap {
+      max-height: 450px;
+      overflow-y: auto;
+    }
+
+    .result-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .85rem;
+    }
+    .result-table thead th {
+      position: sticky;
+      top: 0;
+      background: var(--surface-2);
+      padding: 12px 14px;
+      text-align: left;
+      font-size: .75rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-secondary);
+      border-bottom: 2px solid var(--border);
+      font-weight: 700;
+    }
+    .result-table thead th:last-child {
+      text-align: right;
+      width: 100px;
+    }
+    .result-table tbody tr {
+      border-bottom: 1px solid var(--border-light);
+      transition: all 0.2s ease;
+    }
+    .result-table tbody tr:hover {
+      background: linear-gradient(135deg, var(--surface-2) 0%, var(--bg-alt) 100%);
+    }
+    .result-table tbody td {
+      padding: 12px 14px;
+    }
+    .result-table .td-bar {
+      width: 160px;
+      padding-right: 14px;
+    }
+    .result-table .td-count {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .bar-bg {
+      background: linear-gradient(90deg, var(--surface-2) 0%, var(--bg-alt) 100%);
+      border-radius: 3px;
+      height: 7px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+      height: 100%;
+      border-radius: 3px;
+    }
+
+    /* ── Auth tabs ── */
+    .auth-tabs {
+      display: flex;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 24px;
+      gap: 0;
+      background: var(--bg-alt);
+      padding: 0;
+      border-radius: 8px 8px 0 0;
+      margin: 0 -28px 24px -28px;
+      padding: 0 28px;
+    }
+    .auth-tab {
+      flex: 1;
+      padding: 14px 16px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: .9rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.25s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: .85rem;
+    }
+    .auth-tab:hover {
+      color: var(--text-primary);
+      background: rgba(21,101,192,0.05);
+    }
+    .auth-tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background: transparent;
+    }
+
+    /* ── Form helpers ── */
+    .form-group { margin-bottom: 16px; }
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .input-wrapper input { width: 100%; }
+    .input-hint {
+      font-size: .75rem;
+      color: var(--text-secondary);
+      margin-top: 5px;
+    }
+    .password-strength {
+      display: flex;
+      gap: 5px;
+      margin-top: 8px;
+    }
+    .strength-bar {
+      flex: 1;
+      height: 5px;
+      border-radius: 3px;
+      background: var(--surface-2);
+      transition: all 0.3s ease;
+    }
+    .strength-0 .strength-bar { background: var(--surface-3); }
+    .strength-1 .strength-bar { background: var(--error); }
+    .strength-1 .strength-bar:nth-child(n+2) { background: var(--surface-2); }
+    .strength-2 .strength-bar { background: var(--warning-light); }
+    .strength-2 .strength-bar:nth-child(n+3) { background: var(--surface-2); }
+    .strength-3 .strength-bar { background: linear-gradient(90deg, var(--success) 0%, var(--success-light) 100%); }
+
+    .toggle-pwd {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-size: 1.15rem;
+      transition: all 0.2s ease;
+      padding: 4px;
+    }
+    .toggle-pwd:hover {
+      color: var(--primary);
+      transform: translateY(-50%) scale(1.1);
+    }
+
+    /* ── Username indicator ── */
+    .u-ok { color: var(--success); font-weight: 700; }
+    .u-taken { color: var(--error); font-weight: 700; }
+    .u-checking { color: var(--text-secondary); }
+
+    /* ── Loading spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Theme Toggle ── */
+    .theme-toggle {
+      background: rgba(255,255,255,.2);
+      border: 1px solid rgba(255,255,255,.3);
+      color: #fff;
+      padding: 7px 14px;
+      border-radius: 24px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+    .theme-toggle:hover {
+      background: rgba(255,255,255,.3);
+      box-shadow: 0 0 12px rgba(255,255,255,.2);
+    }
+
+    /* ── Toast Notifications ── */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .toast {
+      background: var(--surface);
+      border-left: 4px solid;
+      padding: 14px 16px;
+      border-radius: 8px;
+      box-shadow: var(--shadow-lg);
+      min-width: 300px;
+      animation: slideInRight 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .toast.success { border-left-color: var(--success); color: var(--success); }
+    .toast.error { border-left-color: var(--error); color: var(--error); }
+    .toast.info { border-left-color: var(--primary); color: var(--primary); }
+    @keyframes slideInRight { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* ── Keyboard Shortcuts Modal ── */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s ease;
+    }
+    .modal.show { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal-content {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: var(--shadow-xl);
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+    .modal-header h2 { margin: 0; font-size: 1.3rem; }
+    .modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.5rem;
+      color: var(--text-secondary);
+    }
+    .shortcut-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .shortcut-key {
+      background: var(--surface-2);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-weight: 600;
+      font-size: .8rem;
+    }
+
+    /* ── Search & Filter ── */
+    .search-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      align-items: center;
+    }
+    .search-bar input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: .9rem;
+      transition: all 0.2s ease;
+    }
+    .search-bar input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(21,101,192,0.1);
+    }
+    .status-filter {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .filter-chip {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: .85rem;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .filter-chip:hover { border-color: var(--primary); }
+    .filter-chip.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    /* ── Reducer Presets ── */
+    .reducer-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .reducer-presets {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .preset-chip {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    .preset-chip:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+    .preset-chip.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .reducer-hint {
+      margin-top: 8px;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+    }
+
+    .assist-panel {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface-2);
+    }
+    .assist-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .assist-actions select {
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text-primary);
+      font-size: 0.85rem;
+    }
+    .candidate-list {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 180px;
+      overflow: auto;
+    }
+    .candidate-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 10px;
+      background: var(--surface);
+    }
+    .candidate-meta {
+      min-width: 0;
+    }
+    .candidate-name {
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .candidate-path {
+      font-size: 0.76rem;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 380px;
+    }
+    .candidate-empty {
+      color: var(--text-secondary);
+      font-size: 0.82rem;
+    }
+
+    /* ── Jobs Empty/Error States ── */
+    .state-panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
+      padding: 18px;
+      margin-top: 8px;
+    }
+    .state-panel h4 {
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+    .state-panel p {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+    }
+    .state-panel.error {
+      border-left: 4px solid var(--error);
+    }
+    .state-panel.info {
+      border-left: 4px solid var(--primary);
+    }
+
+    /* ── Job Timeline ── */
+    .job-timeline {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border);
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      position: relative;
+    }
+    .timeline-step {
+      text-align: center;
+      font-size: 0.73rem;
+      color: var(--text-tertiary);
+      position: relative;
+      padding-top: 18px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+    .timeline-step::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      z-index: 2;
+      transition: all 0.2s ease;
+    }
+    .timeline-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 5px;
+      left: 50%;
+      width: calc(100% + 8px);
+      height: 2px;
+      background: var(--border);
+      z-index: 1;
+    }
+    .timeline-step.done {
+      color: var(--success);
+    }
+    .timeline-step.done::before {
+      background: var(--success);
+      border-color: var(--success);
+    }
+    .timeline-step.done:not(:last-child)::after {
+      background: var(--success-light);
+    }
+    .timeline-step.current {
+      color: var(--primary);
+    }
+    .timeline-step.current::before {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(21,101,192,0.15);
+    }
+    .job-timeline.failed .timeline-step.current,
+    .job-timeline.cancelled .timeline-step.current {
+      color: var(--error);
+    }
+    .job-timeline.failed .timeline-step.current::before,
+    .job-timeline.cancelled .timeline-step.current::before {
+      border-color: var(--error);
+      box-shadow: 0 0 0 3px rgba(198,40,40,0.14);
+    }
+
+    /* ── Copy Feedback ── */
+    .copy-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-size: .8rem;
+      padding: 4px;
+      transition: all 0.2s ease;
+    }
+    .copy-btn:hover { color: var(--primary); }
+    .copy-btn.copied { color: var(--success); }
+
+    /* ── Auto-refresh Toggle ── */
+    .refresh-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .9rem;
+    }
+    .refresh-toggle {
+      appearance: none;
+      width: 44px;
+      height: 24px;
+      background: var(--surface-2);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    .refresh-toggle:checked {
+      background: var(--success);
+      border-color: var(--success);
+    }
+    .refresh-toggle::after {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      background: var(--surface);
+      border-radius: 10px;
+      top: 1px;
+      left: 2px;
+      transition: left 0.3s ease;
+    }
+    .refresh-toggle:checked::after { left: 21px; }
+
+    @media (max-width: 640px) {
+      header {
+        height: 60px;
+        padding: 0 16px;
+      }
+      header h1 {
+        font-size: 1.15rem;
+      }
+      #user-info {
+        gap: 12px;
+      }
+      .card {
+        padding: 20px;
+      }
+      .btn {
+        font-size: .85rem;
+        padding: 10px 16px;
+      }
+      .btn-sm {
+        padding: 8px 12px;
+        font-size: .8rem;
+      }
+      #login-page, #dashboard-page {
+        margin: 20px auto;
+      }
+      .job-row {
+        padding: 14px;
+      }
+      .job-row-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .job-actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+      .result-table {
+        font-size: .8rem;
+      }
+      .result-table thead th {
+        padding: 10px 8px;
+        font-size: .7rem;
+      }
+      .result-table tbody td {
+        padding: 10px 8px;
+      }
+      .result-table .td-bar {
+        width: 120px;
+      }
+      .auth-tabs {
+        margin: 0 -20px 20px -20px;
+        padding: 0 20px;
+      }
+      .file-row {
+        flex-direction: column;
+      }
+      .reducer-controls {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .reducer-presets {
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        scrollbar-width: thin;
+      }
+      .job-timeline {
+        grid-template-columns: repeat(4, minmax(64px, 1fr));
+        overflow-x: auto;
+        gap: 10px;
+        padding-bottom: 2px;
+      }
+      .candidate-path {
+        max-width: 180px;
+      }
+      .timeline-step {
+        font-size: 0.68rem;
+      }
+      .toast {
+        min-width: unset;
+        width: min(92vw, 360px);
+      }
+      .toast-container {
+        right: 12px;
+        left: 12px;
+        bottom: 14px;
+        align-items: flex-end;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>MapReduce Dashboard</h1>
+  <div id="user-info" style="display:none">
+    <span id="username-label"></span>
+    <span id="timer-label"></span>
+    <button class="btn btn-sm btn-ghost" title="Keyboard shortcuts (? key)" aria-label="Open keyboard shortcuts help" onclick="showKeyboardHelp()">?</button>
+    <button class="theme-toggle" title="Toggle dark mode" aria-label="Toggle theme" onclick="toggleTheme()">🌙</button>
+    <button class="btn btn-sm btn-ghost" onclick="logout()">Logout</button>
+  </div>
+</header>
+
+<!-- Keyboard Shortcuts Modal -->
+<div id="shortcuts-modal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>⌨️ Keyboard Shortcuts</h2>
+      <button class="modal-close" aria-label="Close keyboard shortcuts" onclick="hideKeyboardHelp()">✕</button>
+    </div>
+    <div>
+      <div class="shortcut-item">
+        <span>Open keyboard help</span>
+        <span class="shortcut-key">?</span>
+      </div>
+      <div class="shortcut-item">
+        <span>Toggle dark mode</span>
+        <span class="shortcut-key">D</span>
+      </div>
+      <div class="shortcut-item">
+        <span>Refresh jobs</span>
+        <span class="shortcut-key">R</span>
+      </div>
+      <div class="shortcut-item">
+        <span>Logout</span>
+        <span class="shortcut-key">L</span>
+      </div>
+      <div class="shortcut-item">
+        <span>Submit job (on dashboard)</span>
+        <span class="shortcut-key">Ctrl/Cmd + Enter</span>
+      </div>
+      <p style="margin-top:12px;color:var(--text-secondary);font-size:.85rem">Tip: shortcuts are ignored while typing in input fields.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Notifications -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- LOGIN / REGISTER -->
+<div id="login-page">
+  <div class="card" style="max-width:420px;margin:60px auto;border: 2px solid var(--primary);">
+    <div style="text-align: center; margin-bottom: 24px;">
+      <h2 style="font-size: 1.4rem; margin-bottom: 4px;">MapReduce</h2>
+      <p style="color: var(--text-secondary); font-size: .9rem;">Distributed Processing System</p>
+    </div>
+
+    <!-- Tab switcher -->
+    <div class="auth-tabs">
+      <button id="tab-login" class="auth-tab active" onclick="switchTab('login')">Sign in</button>
+      <button id="tab-register" class="auth-tab" onclick="switchTab('register')">Create account</button>
+    </div>
+
+    <!-- Login form -->
+    <div id="panel-login">
+      <form id="login-form">
+        <div class="form-group">
+          <label for="inp-user">Username</label>
+          <input id="inp-user" type="text" placeholder="your username" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="inp-pass">Password</label>
+          <div class="input-wrapper">
+            <input id="inp-pass" type="password" placeholder="password" required autocomplete="current-password">
+            <button type="button" class="toggle-pwd" onclick="togglePasswordVisibility('inp-pass')">👁</button>
+          </div>
+        </div>
+        <div id="login-error" class="alert alert-error"></div>
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:16px;">Sign in</button>
+      </form>
+    </div>
+
+    <!-- Register form -->
+    <div id="panel-register" style="display:none">
+      <form id="register-form" onsubmit="return false">
+        <div class="form-group">
+          <label for="reg-user">Username</label>
+          <div class="input-wrapper">
+            <input id="reg-user" type="text" placeholder="3+ characters" required autocomplete="off" oninput="onUsernameInput(this.value)">
+            <span id="reg-user-indicator" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:1.1rem"></span>
+          </div>
+          <div id="reg-user-msg" style="font-size:.8rem;margin-top:6px;min-height:1.2em;color:var(--text-secondary)"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-pass">Password</label>
+          <div class="input-wrapper">
+            <input id="reg-pass" type="password" placeholder="6+ characters" required autocomplete="new-password" oninput="updatePasswordStrength()">
+            <button type="button" class="toggle-pwd" onclick="togglePasswordVisibility('reg-pass')">👁</button>
+          </div>
+          <div id="strength-indicator" class="password-strength strength-0">
+            <div class="strength-bar"></div>
+            <div class="strength-bar"></div>
+            <div class="strength-bar"></div>
+          </div>
+          <div id="strength-text" style="font-size:.75rem;margin-top:4px;color:var(--text-secondary)"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-pass2">Confirm Password</label>
+          <div class="input-wrapper">
+            <input id="reg-pass2" type="password" placeholder="confirm password" required autocomplete="new-password">
+            <button type="button" class="toggle-pwd" onclick="togglePasswordVisibility('reg-pass2')">👁</button>
+          </div>
+        </div>
+
+        <div id="register-error" class="alert alert-error"></div>
+        <div id="register-success" class="alert alert-success"></div>
+
+        <button type="button" class="btn btn-primary" id="reg-submit-btn" style="width:100%;margin-top:16px" onclick="submitRegister()">
+          Create account
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard-page" style="display:none">
+
+  <!-- Upload Data -->
+  <div class="card">
+    <h3>
+      📁 Input Data File
+      <span id="data-badge" class="status-badge badge-missing">Not uploaded</span>
+    </h3>
+    <p style="font-size:.9rem;color:var(--text-secondary)">Upload the input text file to process (TXT/CSV).</p>
+    <div class="file-row">
+      <label class="drop-zone" for="data-file" ondrop="handleFileDrop(event, 'data')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+        <input type="file" id="data-file" accept=".txt,.csv">
+        Drag files here or click to browse
+      </label>
+      <button class="btn btn-primary btn-sm" aria-label="Upload data file" onclick="uploadFile('data')">Upload</button>
+    </div>
+    <div id="data-alert" class="alert"></div>
+  </div>
+
+  <!-- Upload Code -->
+  <div class="card">
+    <h3>
+      📦 Code Jar
+      <span id="code-badge" class="status-badge badge-missing">Not uploaded</span>
+    </h3>
+    <p style="font-size:.9rem;color:var(--text-secondary)">Upload a JAR file with your Mapper/Reducer implementation.</p>
+    <div class="file-row">
+      <label class="drop-zone" for="code-file" ondrop="handleFileDrop(event, 'code')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+        <input type="file" id="code-file" accept=".jar">
+        Drag files here or click to browse
+      </label>
+      <button class="btn btn-primary btn-sm" aria-label="Upload code JAR" onclick="uploadFile('code')">Upload</button>
+    </div>
+    <div class="assist-panel">
+      <div class="assist-actions">
+        <button class="btn btn-sm btn-outline" onclick="detectCodeJars()">Detect built JARs</button>
+        <select id="build-module" aria-label="Select example module to build">
+          <option value="wordcount">Build wordcount</option>
+          <option value="loggrep">Build loggrep</option>
+          <option value="arraylookup">Build arraylookup</option>
+        </select>
+        <button class="btn btn-sm btn-outline" onclick="buildSelectedModule()">Build selected</button>
+      </div>
+      <div id="code-candidates" class="candidate-list">
+        <p class="candidate-empty">No scan yet. Use "Detect built JARs".</p>
+      </div>
+    </div>
+    <div id="code-alert" class="alert"></div>
+  </div>
+
+  <!-- Run Job -->
+  <div class="card">
+    <h3>▶️ Execute Job</h3>
+    <div class="form-group">
+      <label for="job-reducers">Number of Reducers</label>
+      <div class="reducer-controls">
+        <input type="number" id="job-reducers" value="2" min="1" max="16" style="width:140px" oninput="setCustomReducerInput()">
+        <div class="reducer-presets">
+          <button class="preset-chip" data-reducers="1" onclick="applyReducerPreset(1)">Fast 1</button>
+          <button class="preset-chip active" data-reducers="2" onclick="applyReducerPreset(2)">Balanced 2</button>
+          <button class="preset-chip" data-reducers="4" onclick="applyReducerPreset(4)">Throughput 4</button>
+          <button class="preset-chip" data-reducers="8" onclick="applyReducerPreset(8)">Heavy 8</button>
+          <button class="preset-chip" id="preset-auto" onclick="applySmartReducers()">Auto</button>
+        </div>
+      </div>
+      <div class="reducer-hint" id="reducer-hint">Balanced default selected.</div>
+    </div>
+    <div style="margin-top:16px">
+      <button class="btn btn-primary" id="job-submit-btn" onclick="submitJob()" disabled aria-label="Submit MapReduce job">
+        <span>Submit Job</span>
+      </button>
+    </div>
+    <div id="job-alert" class="alert"></div>
+  </div>
+
+  <!-- Jobs list -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:12px">
+      <h3 style="margin:0">📊 Jobs</h3>
+      <div style="display:flex;gap:10px;align-items:center">
+        <label class="refresh-control">
+          <input type="checkbox" id="auto-refresh" class="refresh-toggle" checked>
+          <span>Auto-refresh</span>
+        </label>
+          <button class="btn btn-sm btn-outline" aria-label="Refresh jobs list" onclick="loadJobs()">Refresh</button>
+      </div>
+    </div>
+    <div class="search-bar">
+      <input type="text" id="job-search" placeholder="Search by job ID..." oninput="filterJobs()">
+      <div class="status-filter">
+        <button class="filter-chip active" data-status="all" onclick="filterByStatus('all')">All</button>
+        <button class="filter-chip" data-status="INITIALIZING" onclick="filterByStatus('INITIALIZING')">🚀 Starting</button>
+        <button class="filter-chip" data-status="MAP_PHASE" onclick="filterByStatus('MAP_PHASE')">🗺 Mapping</button>
+        <button class="filter-chip" data-status="REDUCE_PHASE" onclick="filterByStatus('REDUCE_PHASE')">📊 Reducing</button>
+        <button class="filter-chip" data-status="COMPLETED" onclick="filterByStatus('COMPLETED')">✓ Completed</button>
+        <button class="filter-chip" data-status="FAILED" onclick="filterByStatus('FAILED')">✗ Failed</button>
+      </div>
+    </div>
+    <div id="jobs-list"><p class="jobs-empty">No jobs yet. Submit one to get started!</p></div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+// ── State ──────────────────────────────────────────────────────────────
+let token = null;
+let tokenExpiry = null;
+let timerInterval = null;
+let refreshToken = null;
+let latestDataId = null;
+let latestCodeId = null;
+let currentStatusFilter = 'all';
+let latestDataFileSize = 0;
+let jarCandidates = [];
+const pollingJobs = {};   // jobId → interval id
+
+// ── Helpers ────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+function showAlert(elId, msg, type = 'info') {
+  const el = $(elId);
+  if (!el) return;
+  el.textContent = msg;
+  el.className = `alert alert-${type} show`;
+  // Auto-hide success/info alerts after 5s
+  if (type !== 'error') {
+    setTimeout(() => { if (el.classList.contains('show')) el.classList.remove('show'); }, 5000);
+  }
+}
+
+function parseJwt(t) {
+  try {
+    const base64Url = t.split('.')[1];
+    const base64 = base64Url.replace(/-/g,'+').replace(/_/g,'/');
+    return JSON.parse(atob(base64));
+  } catch { return {}; }
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function togglePasswordVisibility(id) {
+  const input = $(id);
+  input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+// ── Theme Management ────────────────────────────────────────────────────
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  localStorage.setItem('theme', isDark ? 'light' : 'dark');
+  updateThemeButton();
+}
+
+function updateThemeButton() {
+  const btn = document.querySelector('.theme-toggle');
+  if (!btn) return;
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  btn.textContent = isDark ? '☀️' : '🌙';
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('theme');
+  const isDark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  if (isDark) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+  updateThemeButton();
+}
+
+// ── Toast Notifications ────────────────────────────────────────────────
+function showToast(msg, type = 'info') {
+  const container = $('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<span>${msg}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+}
+
+// ── Keyboard Shortcuts ─────────────────────────────────────────────────
+function showKeyboardHelp() {
+  const modal = $('shortcuts-modal');
+  if (modal) modal.classList.add('show');
+}
+
+function hideKeyboardHelp() {
+  const modal = $('shortcuts-modal');
+  if (modal) modal.classList.remove('show');
+}
+
+document.addEventListener('keydown', e => {
+  const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+  const typing = tag === 'input' || tag === 'textarea' || (e.target && e.target.isContentEditable);
+
+  if (e.key === '?') showKeyboardHelp();
+  if (typing) return;
+  if (e.key === 'd' && !e.ctrlKey && !e.metaKey && token) toggleTheme();
+  if (e.key === 'r' && !e.ctrlKey && !e.metaKey && token) loadJobs();
+  if (e.key === 'l' && !e.ctrlKey && !e.metaKey && token) logout();
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && token && !e.shiftKey) submitJob();
+  if (e.key === 'Escape') hideKeyboardHelp();
+});
+
+// ── Job Filtering ──────────────────────────────────────────────────────
+function filterByStatus(status) {
+  currentStatusFilter = status;
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.status === status);
+  });
+  filterJobs();
+}
+
+function filterJobs() {
+  const searchVal = $('job-search')?.value.toLowerCase() || '';
+  const jobRows = document.querySelectorAll('[data-job-id]');
+  
+  jobRows.forEach(row => {
+    const jobId = row.dataset.jobId;
+    const status = row.dataset.status;
+    const matchSearch = jobId.includes(searchVal);
+    const matchStatus = currentStatusFilter === 'all' || status === currentStatusFilter;
+    row.style.display = matchSearch && matchStatus ? '' : 'none';
+  });
+}
+
+function renderJobsMessage(title, details, level = 'info') {
+  const list = $('jobs-list');
+  if (!list) return;
+  list.innerHTML = `
+    <div class="state-panel ${level}">
+      <h4>${escHtml(title)}</h4>
+      <p>${escHtml(details)}</p>
+      <button class="btn btn-sm btn-outline" onclick="loadJobs()">Retry</button>
+    </div>
+  `;
+}
+
+function renderManagerOfflineState(details) {
+  renderJobsMessage(
+    'Manager Service Unreachable',
+    details || 'The UI is running, but manager-service is currently unreachable. Start the stack or set MANAGER_BASE_URL to a reachable manager endpoint, then press Retry.',
+    'error'
+  );
+}
+
+function smartReducerValue() {
+  const cores = navigator.hardwareConcurrency || 4;
+  const sizeMB = latestDataFileSize > 0 ? (latestDataFileSize / (1024 * 1024)) : 0;
+
+  let recommended;
+  if (sizeMB >= 256) recommended = Math.min(16, Math.max(4, Math.round(cores / 2)));
+  else if (sizeMB >= 64) recommended = Math.min(16, Math.max(2, Math.round(cores / 3)));
+  else if (sizeMB > 0) recommended = Math.min(16, Math.max(1, Math.round(cores / 4)));
+  else recommended = Math.min(16, Math.max(2, Math.round(cores / 3)));
+
+  return recommended;
+}
+
+function setPresetActive(value, label) {
+  document.querySelectorAll('.preset-chip').forEach(chip => {
+    const reducers = Number(chip.dataset.reducers || 0);
+    chip.classList.toggle('active', reducers === value && reducers > 0);
+  });
+  const autoChip = $('preset-auto');
+  if (autoChip) {
+    autoChip.classList.toggle('active', label === 'auto');
+  }
+}
+
+function applyReducerPreset(value) {
+  const v = Math.min(16, Math.max(1, Number(value) || 2));
+  $('job-reducers').value = String(v);
+  setPresetActive(v, 'preset');
+  $('reducer-hint').textContent = `Preset selected: ${v} reducer${v === 1 ? '' : 's'}.`;
+}
+
+function applySmartReducers() {
+  const v = smartReducerValue();
+  $('job-reducers').value = String(v);
+  setPresetActive(v, 'auto');
+  const mb = latestDataFileSize > 0 ? Math.round(latestDataFileSize / (1024 * 1024)) : null;
+  $('reducer-hint').textContent = mb
+    ? `Auto recommendation: ${v} reducers (${mb} MB input, ${navigator.hardwareConcurrency || 4} cores).`
+    : `Auto recommendation: ${v} reducers based on available CPU cores.`;
+}
+
+function setCustomReducerInput() {
+  const v = Math.min(16, Math.max(1, Number($('job-reducers').value) || 1));
+  $('job-reducers').value = String(v);
+  setPresetActive(v, 'custom');
+  $('reducer-hint').textContent = `Custom reducers: ${v}.`;
+}
+
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let size = bytes;
+  let idx = 0;
+  while (size >= 1024 && idx < units.length - 1) {
+    size /= 1024;
+    idx += 1;
+  }
+  return `${size.toFixed(size >= 10 || idx === 0 ? 0 : 1)} ${units[idx]}`;
+}
+
+function renderCodeCandidates(candidates) {
+  const box = $('code-candidates');
+  if (!box) return;
+  if (!candidates || candidates.length === 0) {
+    box.innerHTML = '<p class="candidate-empty">No built JARs found. Try "Build selected" or run Maven manually.</p>';
+    return;
+  }
+
+  box.innerHTML = candidates.map((c, idx) => {
+    const when = c.lastModifiedEpochMs ? new Date(c.lastModifiedEpochMs).toLocaleString() : '';
+    return `
+      <div class="candidate-row">
+        <div class="candidate-meta">
+          <div class="candidate-name">${escHtml(c.fileName)} · ${formatBytes(c.sizeBytes)}</div>
+          <div class="candidate-path">${escHtml(c.relativePath)}${when ? ` · ${escHtml(when)}` : ''}</div>
+        </div>
+        <button class="btn btn-sm btn-primary" onclick="uploadDetectedJar(${idx})">Use</button>
+      </div>`;
+  }).join('');
+}
+
+async function detectCodeJars(showScanToast = true) {
+  if (!token) return;
+  if (showScanToast) showToast('Scanning workspace for built JARs…', 'info');
+  try {
+    const res = await fetch('/api/v1/code/assist/candidates', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!res.ok) {
+      showAlert('code-alert', '✗ Could not scan for JARs', 'error');
+      return;
+    }
+    jarCandidates = await res.json();
+    renderCodeCandidates(jarCandidates);
+    if (showScanToast) {
+      showToast(`Found ${jarCandidates.length} candidate JAR${jarCandidates.length === 1 ? '' : 's'}`, 'success');
+    }
+  } catch (e) {
+    showAlert('code-alert', '✗ Scan failed', 'error');
+  }
+}
+
+async function uploadDetectedJar(index) {
+  const candidate = jarCandidates[index];
+  if (!candidate || !candidate.candidateId) return;
+
+  showAlert('code-alert', `⟳ Uploading ${candidate.fileName}…`, 'info');
+  try {
+    const res = await fetch(`/api/v1/code/assist/candidates/${encodeURIComponent(candidate.candidateId)}/upload`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const msg = data.error || data.message || `Upload failed (${res.status})`;
+      showAlert('code-alert', `✗ ${msg}`, 'error');
+      return;
+    }
+
+    latestCodeId = data.id || data.fileId;
+    const badge = $('code-badge');
+    badge.textContent = candidate.fileName;
+    badge.className = 'status-badge badge-ok';
+    updateRunButton();
+    showAlert('code-alert', `✓ Uploaded detected JAR: ${candidate.fileName}`, 'success');
+    showToast('Code JAR uploaded from detected artifacts', 'success');
+  } catch (e) {
+    showAlert('code-alert', '✗ Failed to upload detected JAR', 'error');
+  }
+}
+
+async function buildSelectedModule() {
+  if (!token) return;
+  const module = $('build-module')?.value || 'wordcount';
+  showAlert('code-alert', `⟳ Building ${module}…`, 'info');
+
+  try {
+    const res = await fetch(`/api/v1/code/assist/build?module=${encodeURIComponent(module)}`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      const tail = data.outputTail ? `\n${String(data.outputTail).split('\n').slice(-4).join(' | ')}` : '';
+      showAlert('code-alert', `✗ Build failed for ${module}.${tail}`, 'error');
+      return;
+    }
+
+    showAlert('code-alert', `✓ Build completed for ${module}. Scanning for new JARs…`, 'success');
+    await detectCodeJars(false);
+  } catch (e) {
+    showAlert('code-alert', `✗ Build failed for ${module}`, 'error');
+  }
+}
+
+function statusStageIndex(status) {
+  const map = {
+    INITIALIZING: 0,
+    MAP_PHASE: 1,
+    REDUCE_PHASE: 2,
+    COMPLETED: 3,
+    FAILED: 2,
+    CANCELLED: 2
+  };
+  return map[status] ?? 0;
+}
+
+function updateTimeline(jobId, status) {
+  const timeline = $('timeline-' + jobId);
+  if (!timeline) return;
+
+  timeline.classList.remove('failed', 'cancelled');
+  if (status === 'FAILED') timeline.classList.add('failed');
+  if (status === 'CANCELLED') timeline.classList.add('cancelled');
+
+  const current = statusStageIndex(status);
+  const steps = timeline.querySelectorAll('.timeline-step');
+  steps.forEach((step, idx) => {
+    step.classList.toggle('done', idx < current || (status === 'COMPLETED' && idx <= current));
+    step.classList.toggle('current', idx === current && status !== 'COMPLETED');
+  });
+}
+
+// ── Copy to Clipboard ──────────────────────────────────────────────────
+async function copyJobId(jobId) {
+  try {
+    await navigator.clipboard.writeText(jobId);
+    showToast(`📋 Copied: ${jobId.substring(0, 12)}...`, 'success');
+  } catch {
+    showToast('Failed to copy', 'error');
+  }
+}
+
+// ── Drag & Drop File Upload ──────────────────────────────────────────
+function handleDragOver(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const zone = e.currentTarget;
+  zone.classList.add('dragover');
+}
+
+function handleDragLeave(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const zone = e.currentTarget;
+  zone.classList.remove('dragover');
+}
+
+function handleFileDrop(e, type) {
+  e.preventDefault();
+  e.stopPropagation();
+  const zone = e.currentTarget;
+  zone.classList.remove('dragover');
+
+  const files = e.dataTransfer?.files;
+  if (files && files.length > 0) {
+    const fileInput = $(`${type}-file`);
+    fileInput.files = files;
+    uploadFile(type);
+  }
+}
+
+// ── Password strength meter ──────────────────────────────────────────
+function updatePasswordStrength() {
+  const pwd = $('reg-pass').value;
+  const indicator = $('strength-indicator');
+  const text = $('strength-text');
+
+  let strength = 0;
+  if (pwd.length >= 6) strength = 1;
+  if (pwd.length >= 8 && /[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) strength = 2;
+  if (strength >= 2 && /[0-9]/.test(pwd) && /[^a-zA-Z0-9]/.test(pwd)) strength = 3;
+
+  indicator.className = `password-strength strength-${strength}`;
+  const labels = ['', 'Weak', 'Fair', 'Strong'];
+  const colors = ['', 'var(--error)', 'var(--warning)', 'var(--success)'];
+  text.textContent = labels[strength] || '';
+  text.style.color = colors[strength] || '';
+}
+
+// ── Tab switching ──────────────────────────────────────────────────────
+function switchTab(tab) {
+  $('panel-login').style.display    = tab === 'login'    ? '' : 'none';
+  $('panel-register').style.display = tab === 'register' ? '' : 'none';
+  $('tab-login').classList.toggle('active',    tab === 'login');
+  $('tab-register').classList.toggle('active', tab === 'register');
+  // clear messages on switch
+  ['login-error', 'register-error', 'register-success'].forEach(id => {
+    const el = $(id);
+    if (el) el.className = el.id.includes('success') ? 'alert alert-success' : 'alert alert-error';
+  });
+}
+
+// ── Username availability check (debounced) ────────────────────────────
+let _usernameTimer = null;
+let _lastChecked = '';
+let _usernameOk = false;
+
+function onUsernameInput(val) {
+  const clean = val.trim().toLowerCase();
+  const msgEl = $('reg-user-msg');
+  const indEl = $('reg-user-indicator');
+
+  if (clean === _lastChecked) return;
+  _lastChecked = clean;
+  _usernameOk = false;
+
+  clearTimeout(_usernameTimer);
+
+  if (clean.length < 3) {
+    msgEl.textContent = clean.length ? '⚠ At least 3 characters' : '';
+    msgEl.style.color = 'var(--text-secondary)';
+    indEl.textContent = '';
+    return;
+  }
+
+  msgEl.textContent = 'Checking…';
+  msgEl.style.color = 'var(--text-secondary)';
+  indEl.textContent = '⟳';
+
+  _usernameTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(clean)}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      if (data.available) {
+        msgEl.textContent = '✓ Available';
+        msgEl.className = 'u-ok';
+        indEl.textContent = '✓';
+        indEl.className = 'u-ok';
+        _usernameOk = true;
+      } else {
+        msgEl.textContent = '✗ Already taken';
+        msgEl.className = 'u-taken';
+        indEl.textContent = '✗';
+        indEl.className = 'u-taken';
+        _usernameOk = false;
+      }
+    } catch (e) {
+      msgEl.textContent = 'Check failed';
+      msgEl.className = 'u-taken';
+      indEl.textContent = '?';
+    }
+  }, 500);
+}
+
+async function submitRegister() {
+  const username = $('reg-user').value.trim().toLowerCase();
+  const password = $('reg-pass').value;
+  const password2 = $('reg-pass2').value;
+  const errEl  = $('register-error');
+  const succEl = $('register-success');
+  const btn = $('reg-submit-btn');
+
+  errEl.className  = 'alert alert-error';
+  succEl.className = 'alert alert-success';
+
+  if (username.length < 3) {
+    showAlert('register-error', '⚠ Username must be at least 3 characters', 'error');
+    return;
+  }
+  if (!_usernameOk) {
+    showAlert('register-error', '⚠ Username not checked or unavailable', 'error');
+    return;
+  }
+  if (password.length < 6) {
+    showAlert('register-error', '⚠ Password must be at least 6 characters', 'error');
+    return;
+  }
+  if (password !== password2) {
+    showAlert('register-error', '✗ Passwords do not match', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  const origText = btn.textContent;
+  btn.innerHTML = '<span class="spinner"></span> Creating…';
+
+  try {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const errMsg = data.error || data.message || 'Registration failed';
+      showAlert('register-error', '✗ ' + errMsg, 'error');
+    } else {
+      showAlert('register-success', '✓ Account created! Switching to sign in…', 'success');
+      // pre-fill login form and switch
+      $('inp-user').value = username;
+      $('inp-pass').value = '';
+      setTimeout(() => switchTab('login'), 1500);
+    }
+  } catch (e) {
+    showAlert('register-error', '✗ Network error — please try again', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origText;
+  }
+}
+
+// ── Auth ───────────────────────────────────────────────────────────────
+$('login-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  const origText = btn.textContent;
+  btn.innerHTML = '<span class="spinner"></span> Signing in…';
+
+  try {
+    const res = await fetch('/api/auth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: $('inp-user').value.trim(),
+        password: $('inp-pass').value
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const msg = data.error_description || data.error || 'Login failed';
+      showAlert('login-error', '✗ ' + msg, 'error');
+      btn.disabled = false;
+      btn.textContent = origText;
+      return;
+    }
+    token = data.access_token;
+    refreshToken = data.refresh_token || null;
+    const claims = parseJwt(token);
+    tokenExpiry = claims.exp * 1000;
+    $('login-page').style.display = 'none';
+    $('dashboard-page').style.display = 'block';
+    $('user-info').style.display = 'flex';
+    $('username-label').textContent = `👤 ${claims.preferred_username || 'User'}`;
+    $('inp-user').value = '';
+    $('inp-pass').value = '';
+    startTokenTimer();
+    loadJobs();
+    detectCodeJars(false);
+  } catch (e) {
+    showAlert('login-error', '✗ Network error — please try again', 'error');
+    btn.disabled = false;
+    btn.textContent = origText;
+  }
+});
+
+function logout() {
+  token = null;
+  refreshToken = null;
+  clearInterval(timerInterval);
+  Object.values(pollingJobs).forEach(clearInterval);
+  $('dashboard-page').style.display = 'none';
+  $('user-info').style.display = 'none';
+  $('login-page').style.display = 'block';
+  $('login-error').className = 'alert alert-error';
+}
+
+function startTokenTimer() {
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    const secs = Math.max(0, Math.round((tokenExpiry - Date.now()) / 1000));
+    const m = String(Math.floor(secs / 60)).padStart(2,'0');
+    const s = String(secs % 60).padStart(2,'0');
+    const el = $('timer-label');
+    el.textContent = `⏱ ${m}:${s}`;
+    
+    if (secs < 120) {
+      el.className = 'timer-label warn';
+    }
+    if (secs < 60) {
+      el.className = 'timer-label critical';
+    } else if (secs >= 120) {
+      el.className = 'timer-label';
+    }
+    
+    if (secs === 0) {
+      alert('⚠ Your session has expired. Please sign in again.');
+      logout();
+    }
+  }, 1000);
+}
+
+// ── Auto-refresh Toggle Handler ─────────────────────────────────────────
+$('auto-refresh')?.addEventListener('change', e => {
+  const isEnabled = e.target.checked;
+  if (isEnabled) {
+    // Re-enable polling for non-terminal jobs
+    document.querySelectorAll('[data-job-id]').forEach(row => {
+      const status = row.getAttribute('data-status');
+      const terminal = ['COMPLETED','FAILED','CANCELLED'].includes(status);
+      if (!terminal && !pollingJobs[row.getAttribute('data-job-id')]) {
+        startPolling(row.getAttribute('data-job-id'));
+      }
+    });
+    showToast('🔄 Auto-refresh enabled', 'success');
+  } else {
+    // Disable polling
+    Object.keys(pollingJobs).forEach(jobId => {
+      clearInterval(pollingJobs[jobId]);
+      delete pollingJobs[jobId];
+    });
+    showToast('⏸ Auto-refresh disabled', 'info');
+  }
+});
+
+// ── Initialize Theme ───────────────────────────────────────────────────
+initTheme();
+applySmartReducers();
+
+// ── Upload ─────────────────────────────────────────────────────────────
+async function uploadFile(type) {
+  const fileInput = $(`${type}-file`);
+  const alertId   = `${type}-alert`;
+  const badgeId   = `${type}-badge`;
+
+  if (!fileInput.files[0]) {
+    showAlert(alertId, '⚠ Select a file first', 'warning');
+    return;
+  }
+
+  const file = fileInput.files[0];
+  const maxSize = 1024 * 1024 * 500; // 500MB
+  if (file.size > maxSize) {
+    showAlert(alertId, '✗ File too large (max 500MB)', 'error');
+    return;
+  }
+
+  showAlert(alertId, `⟳ Uploading ${file.name}…`, 'info');
+
+  const fd = new FormData();
+  fd.append('file', file);
+
+  try {
+    const res = await fetch(`/api/v1/${type}`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+      body: fd
+    });
+
+    if (!res.ok) {
+      const errMsg = res.status === 413 ? 'File too large' : `Upload failed (${res.status})`;
+      showAlert(alertId, `✗ ${errMsg}`, 'error');
+      return;
+    }
+
+    const data = await res.json();
+    if (type === 'data') {
+      latestDataId = data.id || data.fileId;
+      latestDataFileSize = file.size;
+      applySmartReducers();
+    } else {
+      latestCodeId = data.id || data.fileId;
+    }
+    const badge = $(badgeId);
+    badge.textContent = file.name;
+    badge.className = 'status-badge badge-ok';
+    showAlert(alertId, `✓ Uploaded: ${file.name}`, 'success');
+    updateRunButton();
+  } catch (e) {
+    const msg = e && String(e.message || '').includes('Failed to fetch')
+      ? '✗ Network error — manager-service may be offline'
+      : '✗ Network error';
+    showAlert(alertId, msg, 'error');
+  }
+}
+
+function updateRunButton() {
+  $('job-submit-btn').disabled = !(latestDataId && latestCodeId);
+}
+
+// ── Submit job ─────────────────────────────────────────────────────────
+async function submitJob() {
+  const btn = $('job-submit-btn');
+  const numReducers = parseInt($('job-reducers').value, 10) || 2;
+  
+  if (!latestDataId || !latestCodeId) {
+    showAlert('job-alert', '⚠ Please upload data and code first', 'warning');
+    return;
+  }
+
+  btn.disabled = true;
+  const origText = btn.innerHTML;
+  btn.innerHTML = '<span class="spinner"></span> Submitting…';
+
+  try {
+    const res = await fetch('/api/v1/jobs', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ dataId: latestDataId, codeId: latestCodeId, numReducers })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      const msg = data.error || data.message || `Error ${res.status}`;
+      showAlert('job-alert', `✗ ${msg}`, 'error');
+    } else {
+      showAlert('job-alert', `✓ Job submitted: ${data.jobId}`, 'success');
+      loadJobs();
+    }
+  } catch (e) {
+    showAlert('job-alert', '✗ Network error', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origText;
+  }
+}
+
+// ── Jobs list ──────────────────────────────────────────────────────────
+async function loadJobs() {
+  try {
+    const res = await fetch('/api/v1/jobs', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!res.ok) {
+      if (res.status >= 500) {
+        renderManagerOfflineState('Manager API returned a server error while loading jobs. Ensure manager-service is running and reachable from ui-service.');
+      } else {
+        renderJobsMessage('Could Not Load Jobs', `Request failed with status ${res.status}.`, 'error');
+      }
+      return;
+    }
+    const jobs = await res.json();
+
+    const list = $('jobs-list');
+    list.innerHTML = '';
+    if (!jobs || jobs.length === 0) {
+      list.innerHTML = '<p class="jobs-empty">No jobs yet. Submit one to get started!</p>';
+      return;
+    }
+
+    [...jobs].reverse().forEach(j => {
+      addJobRow(j.jobId, j.status);
+      if (j.outputUrls && j.outputUrls.length > 0) {
+        const row = $('job-' + j.jobId);
+        if (row) row.dataset.urls = JSON.stringify(j.outputUrls);
+      }
+      const terminal = ['COMPLETED','FAILED','CANCELLED'].includes(j.status);
+      if (!terminal) startPolling(j.jobId);
+    });
+    filterJobs();
+  } catch (e) {
+    renderManagerOfflineState();
+  }
+}
+
+function addJobRow(jobId, status) {
+  const list = $('jobs-list');
+  if (list.querySelector('.jobs-empty')) list.innerHTML = '';
+
+  const row = document.createElement('div');
+  row.className = 'job-row';
+  row.id = 'job-' + jobId;
+  row.setAttribute('data-job-id', jobId);
+  row.setAttribute('data-status', status);
+  row.innerHTML = `
+    <div class="job-row-header">
+      <div class="job-id">
+        ${jobId.substring(0, 12)}…
+        <button class="copy-btn" title="Copy full job ID" aria-label="Copy full job ID" onclick="copyJobId('${jobId}')">📋</button>
+      </div>
+      <div class="job-actions">
+        <span class="status-badge s-${status}" id="status-${jobId}">${statusLabel(status)}</span>
+        <button class="btn btn-sm btn-cancel" id="cancel-btn-${jobId}"
+          onclick="cancelJob('${jobId}')"
+          style="display:${isRunning(status)?'inline-flex':'none'}">Stop</button>
+        <button class="btn btn-sm btn-outline" id="view-btn-${jobId}"
+          onclick="toggleViewer('${jobId}')"
+          style="display:${status==='COMPLETED'?'inline-flex':'none'}">View</button>
+      </div>
+    </div>
+    <div class="job-timeline" id="timeline-${jobId}">
+      <div class="timeline-step">Queued</div>
+      <div class="timeline-step">Map</div>
+      <div class="timeline-step">Reduce</div>
+      <div class="timeline-step">Done</div>
+    </div>
+    <div class="result-viewer" id="viewer-${jobId}">
+      <div class="viewer-toolbar">
+        <span class="viewer-stats" id="stats-${jobId}">Loading…</span>
+        <button class="btn btn-sm btn-outline" onclick="downloadResults('${jobId}')">⬇ Download</button>
+      </div>
+      <div class="result-table-wrap">
+        <table class="result-table">
+          <thead>
+            <tr>
+              <th>Word</th>
+              <th>Frequency</th>
+              <th>Count</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-${jobId}"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  list.prepend(row);
+  updateTimeline(jobId, status);
+}
+
+function statusLabel(s) {
+  const map = {
+    INITIALIZING: '🚀 Starting',
+    MAP_PHASE: '🗺 Mapping',
+    REDUCE_PHASE: '📊 Reducing',
+    COMPLETED: '✓ Done',
+    FAILED: '✗ Failed',
+    CANCELLED: '⊘ Cancelled'
+  };
+  return map[s] || s;
+}
+
+function isRunning(status) {
+  return ['INITIALIZING','MAP_PHASE','REDUCE_PHASE'].includes(status);
+}
+
+function startPolling(jobId) {
+  if (pollingJobs[jobId]) return;
+  const autoRefresh = $('auto-refresh')?.checked !== false;
+  if (!autoRefresh) return;
+  pollingJobs[jobId] = setInterval(() => pollJob(jobId), 3000);
+}
+
+async function pollJob(jobId) {
+  try {
+    const res = await fetch(`/api/v1/jobs/${jobId}`, {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+
+    const row = $('job-' + jobId);
+    const oldStatus = row?.getAttribute('data-status');
+    
+    if (row) row.setAttribute('data-status', data.status);
+
+    const badge = $('status-' + jobId);
+    if (badge) {
+      badge.textContent = statusLabel(data.status);
+      badge.className = 'status-badge s-' + data.status;
+    }
+    updateTimeline(jobId, data.status);
+
+    // Show toast on status change
+    if (oldStatus && oldStatus !== data.status) {
+      const emoji = { COMPLETED: '✓', FAILED: '✗', CANCELLED: '⊘' }[data.status] || '🔄';
+      showToast(`${emoji} Job ${jobId.substring(0, 12)}… is now ${statusLabel(data.status).toLowerCase()}`, 'info');
+    }
+
+    const cancelBtn = $('cancel-btn-' + jobId);
+    if (cancelBtn) cancelBtn.style.display = isRunning(data.status) ? 'inline-flex' : 'none';
+
+    const terminal = ['COMPLETED','FAILED','CANCELLED'].includes(data.status);
+    if (terminal) {
+      clearInterval(pollingJobs[jobId]);
+      delete pollingJobs[jobId];
+    }
+
+    if (data.status === 'COMPLETED') {
+      const viewBtn = $('view-btn-' + jobId);
+      if (viewBtn) viewBtn.style.display = 'inline-flex';
+
+      if (data.outputUrls && data.outputUrls.length > 0) {
+        const row = $('job-' + jobId);
+        if (row) row.dataset.urls = JSON.stringify(data.outputUrls);
+      }
+    }
+  } catch (e) {
+    // polling error, continue
+  }
+}
+
+async function cancelJob(jobId) {
+  if (!confirm(`Cancel job ${jobId.substring(0, 12)}…?`)) return;
+  try {
+    const res = await fetch(`/api/v1/jobs/${jobId}`, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (res.ok || res.status === 204) {
+      const badge = $('status-' + jobId);
+      if (badge) {
+        badge.textContent = '⊘ Cancelled';
+        badge.className = 'status-badge s-CANCELLED';
+      }
+      updateTimeline(jobId, 'CANCELLED');
+      const cancelBtn = $('cancel-btn-' + jobId);
+      if (cancelBtn) cancelBtn.style.display = 'none';
+      clearInterval(pollingJobs[jobId]);
+      delete pollingJobs[jobId];
+    } else {
+      alert('✗ Cancel failed');
+    }
+  } catch (e) {
+    alert('✗ Network error');
+  }
+}
+
+// ── Result viewer ──────────────────────────────────────────────────────
+async function toggleViewer(jobId) {
+  const viewer = $('viewer-' + jobId);
+  if (!viewer) return;
+
+  if (viewer.classList.contains('open')) {
+    viewer.classList.remove('open');
+    $('view-btn-' + jobId).textContent = 'View';
+    return;
+  }
+
+  const tbody = $('tbody-' + jobId);
+  if (tbody.childElementCount === 0) {
+    let urls = [];
+    const row = $('job-' + jobId);
+    if (row && row.dataset.urls) {
+      urls = JSON.parse(row.dataset.urls);
+    } else {
+      try {
+        const r = await fetch(`/api/v1/jobs/${jobId}`, {
+          headers: { Authorization: 'Bearer ' + token }
+        });
+        if (r.ok) {
+          const d = await r.json();
+          urls = d.outputUrls || [];
+          if (row && urls.length) row.dataset.urls = JSON.stringify(urls);
+        }
+      } catch (e) {
+        // skip
+      }
+    }
+    await loadResultsIntoTable(urls, tbody, jobId);
+  }
+
+  viewer.classList.add('open');
+  $('view-btn-' + jobId).textContent = 'Hide';
+}
+
+async function loadResultsIntoTable(urls, tbody, jobId) {
+  tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-secondary);padding:24px">Loading results…</td></tr>';
+
+  const rows = [];
+  for (const url of urls) {
+    try {
+      const r = await fetch(url);
+      if (!r.ok) continue;
+      const text = await r.text();
+      text.split('\n').filter(Boolean).forEach(line => {
+        const tab = line.indexOf('\t');
+        const key = tab === -1 ? line : line.substring(0, tab);
+        const val = tab === -1 ? '' : line.substring(tab + 1).trim();
+        rows.push([key, isNaN(val) ? val : Number(val)]);
+      });
+    } catch (e) { /* skip */ }
+  }
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-secondary);padding:24px">No results</td></tr>';
+    return;
+  }
+
+  // Sort by count descending
+  rows.sort((a, b) => (typeof b[1] === 'number' ? b[1] : 0) - (typeof a[1] === 'number' ? a[1] : 0));
+
+  const maxVal = typeof rows[0][1] === 'number' ? rows[0][1] : 1;
+  const totalCount = rows.reduce((s, r) => s + (typeof r[1] === 'number' ? r[1] : 0), 0);
+
+  // Stats
+  const statsEl = $('stats-' + jobId);
+  if (statsEl) {
+    statsEl.innerHTML = `<b>${rows.length}</b> words · <b>${totalCount.toLocaleString()}</b> occurrences`;
+  }
+
+  tbody.innerHTML = rows.map(([k, v]) => {
+    const pct = typeof v === 'number' ? Math.round((v / maxVal) * 100) : 0;
+    return `
+      <tr>
+        <td>${escHtml(k)}</td>
+        <td class="td-bar">
+          <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
+        </td>
+        <td class="td-count">${typeof v === 'number' ? v.toLocaleString() : escHtml(String(v))}</td>
+      </tr>`;
+  }).join('');
+}
+
+async function downloadResults(jobId) {
+  const row = $('job-' + jobId);
+  const urls = row && row.dataset.urls ? JSON.parse(row.dataset.urls) : [];
+  let text = '';
+  for (const url of urls) {
+    try {
+      const r = await fetch(url);
+      if (r.ok) text += await r.text();
+    } catch (e) { /* skip */ }
+  }
+  if (!text) {
+    alert('No results to download');
+    return;
+  }
+  const blob = new Blob([text], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `results-${jobId.substring(0, 8)}.txt`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+</script>
+
+</body>
+</html>

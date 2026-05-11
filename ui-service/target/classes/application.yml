@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: ui-service
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://keycloak:8080/realms/mapreduce}
+          jwk-set-uri: ${KEYCLOAK_ISSUER_URI:http://keycloak:8080/realms/mapreduce}/protocol/openid-connect/certs
+
+  servlet:
+    multipart:
+      max-file-size: 1GB
+      max-request-size: 1GB
+
+server:
+  port: 8080
+
+app:
+  manager:
+    base-url: ${MANAGER_BASE_URL:http://manager-service:8081}
+
+keycloak:
+  admin:
+    base-url: ${KEYCLOAK_ADMIN_URL:http://keycloak:8080}
+    username: ${KEYCLOAK_ADMIN_USERNAME:admin}
+    password: ${KEYCLOAK_ADMIN_PASSWORD:admin-secret}
+  realm: ${KEYCLOAK_REALM:mapreduce}
+  auth:
+    token-uri: ${KEYCLOAK_ISSUER_URI:http://keycloak:8080/realms/mapreduce}/protocol/openid-connect/token
+    client-id: ${KEYCLOAK_CLIENT_ID:mapreduce-cli}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  pattern:
+    console: >
+      {"timestamp":"%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ}","service":"ui",
+       "level":"%level","message":"%message","thread":"%thread"}%n
+  level:
+    gr.tuc.distributed: INFO
+    org.springframework.security: WARN
