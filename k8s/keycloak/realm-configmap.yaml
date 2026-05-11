@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realm
+  namespace: mapreduce
+data:
+  mapreduce-realm.json: |
+    {
+      "id": "mapreduce",
+      "realm": "mapreduce",
+      "enabled": true,
+      "roles": {
+        "realm": [
+          {
+            "name": "admin",
+            "description": "MapReduce administrator",
+            "composite": true,
+            "composites": {
+              "client": {
+                "realm-management": [
+                  "manage-users",
+                  "view-users",
+                  "query-users"
+                ]
+              }
+            }
+          },
+          {
+            "name": "user",
+            "description": "Regular user"
+          }
+        ]
+      },
+      "clients": [
+        {
+          "clientId": "mapreduce-cli",
+          "enabled": true,
+          "publicClient": true,
+          "directAccessGrantsEnabled": true,
+          "standardFlowEnabled": false,
+          "fullScopeAllowed": true
+        }
+      ],
+      "attributes": {
+        "userProfileEnabled": "false"
+      }
+    }
