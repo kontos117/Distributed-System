@@ -1,0 +1,33 @@
+# Manager Service needs permission to create/delete Kubernetes Jobs (workers).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: manager-sa
+  namespace: mapreduce
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: manager-job-role
+  namespace: mapreduce
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: manager-job-rolebinding
+  namespace: mapreduce
+subjects:
+  - kind: ServiceAccount
+    name: manager-sa
+    namespace: mapreduce
+roleRef:
+  kind: Role
+  name: manager-job-role
+  apiGroup: rbac.authorization.k8s.io

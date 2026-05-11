@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: manager-config
+  namespace: mapreduce
+data:
+  DB_HOST:              postgres
+  DB_PORT:              "5432"
+  DB_NAME:              mapreduce
+  MINIO_ENDPOINT:       http://minio:9000
+  MINIO_PUBLIC_ENDPOINT: http://192.168.49.2:30900
+  MINIO_BUCKET:         mapreduce
+  K8S_NAMESPACE:        mapreduce
+  WORKER_IMAGE:         mapreduce/worker:latest
+  MANAGER_INTERNAL_URL: http://manager-service:8081
+  KEYCLOAK_ISSUER_URI:  http://keycloak:8080/realms/mapreduce
+  DEFAULT_MAP_TASKS:    "4"
