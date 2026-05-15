@@ -1,0 +1,26 @@
+# Overrides for the 'test' profile.
+# Real URLs are set dynamically by TestContainersBase via @DynamicPropertySource.
+
+spring:
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: validate   # Flyway still runs; Hibernate validates
+
+  flyway:
+    enabled: true
+
+  #disable K8s auto-configuration (no cluster in CI)
+  cloud:
+    kubernetes:
+      enabled: false
+
+mapreduce:
+  default-map-tasks: 2   #keep small for fast tests
+  watchdog:
+    interval-ms: 999999  #disable watchdog during tests
+
+logging:
+  level:
+    gr.tuc.distributed: DEBUG
+    org.flywaydb: INFO
